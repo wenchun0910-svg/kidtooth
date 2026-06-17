@@ -39,7 +39,7 @@
         let allRecords = []; // 存放從 Firebase 取得的所有記錄
 
         // 📝 請將以下內容替換為您在 Firebase 主控台取得的設定
-        const firebaseConfig = {
+  const firebaseConfig = {
   apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
   authDomain: "kidtooth-23c63.firebaseapp.com",
   projectId: "kidtooth-23c63",
@@ -47,7 +47,6 @@
   messagingSenderId: "967363107437",
   appId: "1:967363107437:web:3a6e319362a9596793bd64"
 };
-
         // Firebase 初始化
         async function initFirebase() {
             try {
@@ -221,7 +220,7 @@
             </div>
 
             <!-- 學生按鈕容器 -->
-            <div id="studentGrid" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3 sm:gap-4 justify-items-center">
+            <div id="studentGrid" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 gap-4 sm:gap-5 md:gap-6 justify-items-center">
                 <!-- 按鈕由 JS 動態生成 -->
             </div>
         </div>
@@ -505,7 +504,8 @@
                     const btn = document.createElement('button');
                     const isActive = brushedStudents.has(i);
                     
-                    btn.className = `student-btn w-12 h-12 sm:w-14 sm:h-14 rounded-full border-4 text-lg sm:text-xl font-bold flex items-center justify-center font-bubbly
+                    // 這裡加大了寬高 (w-16 h-16 到 w-20 h-20) 及字體大小 (text-2xl sm:text-3xl)
+                    btn.className = `student-btn w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 text-2xl sm:text-3xl font-bold flex items-center justify-center font-bubbly
                                      ${isActive ? 'active' : 'bg-white border-sky-light text-title-blue/40 hover:border-active-blue hover:text-active-blue'}`;
                     btn.innerText = i;
                     
@@ -520,10 +520,10 @@
                 if (brushedStudents.has(id)) {
                     brushedStudents.delete(id);
                     btnElement.classList.remove('active');
-                    btnElement.className = `student-btn w-12 h-12 sm:w-14 sm:h-14 rounded-full border-4 text-lg sm:text-xl font-bold flex items-center justify-center font-bubbly bg-white border-sky-light text-title-blue/40 hover:border-active-blue hover:text-active-blue`;
+                    btnElement.className = `student-btn w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 text-2xl sm:text-3xl font-bold flex items-center justify-center font-bubbly bg-white border-sky-light text-title-blue/40 hover:border-active-blue hover:text-active-blue`;
                 } else {
                     brushedStudents.add(id);
-                    btnElement.className = `student-btn w-12 h-12 sm:w-14 sm:h-14 rounded-full border-4 text-lg sm:text-xl font-bold flex items-center justify-center font-bubbly active`;
+                    btnElement.className = `student-btn w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 text-2xl sm:text-3xl font-bold flex items-center justify-center font-bubbly active`;
                 }
                 updateCounter();
             }
@@ -639,9 +639,9 @@
                                     <span>📅 ${r.date}</span>
                                     <span class="text-sm bg-[#E4F4FB] px-3 py-1 rounded-full text-active-blue font-bold tracking-wide">已潔牙: ${r.brushed.length} / ${r.total}</span>
                                 </div>
-                                <div class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 sm:gap-3 justify-items-center">`;
+                                <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 gap-3 sm:gap-4 md:gap-5 justify-items-center">`;
                     
-                    // 繪製該日期的全班小按鈕
+                    // 繪製該日期的全班小按鈕 (這裡也一併放大了)
                     for(let i = 1; i <= r.total; i++) {
                         const isBrushed = r.brushed.includes(i);
                         // 按鈕樣式 (依據狀態變化)
@@ -649,7 +649,7 @@
                             ? 'bg-active-blue text-white border-active-blue shadow-md transform scale-105 rotate-[-3deg]' 
                             : 'bg-white text-title-blue/40 border-sky-light hover:border-active-blue hover:text-active-blue';
                             
-                        html += `<button onclick="toggleHistoryRecord('${r.date}', ${i})" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 text-sm sm:text-base font-bold flex items-center justify-center font-bubbly transition-all duration-300 ${btnClass}">${i}</button>`;
+                        html += `<button onclick="toggleHistoryRecord('${r.date}', ${i})" class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-[3px] text-lg sm:text-xl md:text-2xl font-bold flex items-center justify-center font-bubbly transition-all duration-300 ${btnClass}">${i}</button>`;
                     }
                     
                     html += `   </div>
