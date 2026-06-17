@@ -47,6 +47,8 @@
   messagingSenderId: "967363107437",
   appId: "1:967363107437:web:3a6e319362a9596793bd64"
 };
+
+
         // Firebase 初始化
         async function initFirebase() {
             try {
@@ -435,7 +437,8 @@
             document.getElementById('btnQueryPeriod').click();
             
             // 如果修改的剛好是「今天」的紀錄，連動更新畫面上方的打卡區
-            const todayStr = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             if (dateStr === todayStr && typeof window.syncTodayViewFromHistory === 'function') {
                 window.syncTodayViewFromHistory(record.brushed);
             }
@@ -534,7 +537,9 @@
 
             // 結束記錄按鈕 (儲存)
             endRecordBtn.addEventListener('click', () => {
-                const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                // 改用本地時間來獲取正確的 YYYY-MM-DD
+                const now = new Date();
+                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
                 const brushedArray = Array.from(brushedStudents).sort((a,b)=>a-b);
                 window.saveRecordToFirebase(todayStr, brushedArray, totalStudents);
             });
