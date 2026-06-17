@@ -35,11 +35,11 @@
         // Global 變數
         window.db = null;
         window.user = null;
-        window.appId = 'kidtooth'; // 您可以自訂您的應用程式 ID
+        window.appId = 'student-brushing-app'; // 您可以自訂您的應用程式 ID
         let allRecords = []; // 存放從 Firebase 取得的所有記錄
 
         // 📝 請將以下內容替換為您在 Firebase 主控台取得的設定
-       const firebaseConfig = {
+    const firebaseConfig = {
   apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
   authDomain: "kidtooth-23c63.firebaseapp.com",
   projectId: "kidtooth-23c63",
@@ -291,14 +291,14 @@
         window.allRecords = []; // 存放取得的所有記錄
         window.isOfflineMode = false; // 離線單機模式旗標
 
-        // 📝 請將以下內容替換為您在 Firebase 主控台取得的設定
+        // 📝 已替換為您的專屬 Firebase 設定
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
+            authDomain: "kidtooth-23c63.firebaseapp.com",
+            projectId: "kidtooth-23c63",
+            storageBucket: "kidtooth-23c63.firebasestorage.app",
+            messagingSenderId: "967363107437",
+            appId: "1:967363107437:web:3a6e319362a9596793bd64"
         };
 
         // Firebase 初始化 (加入防呆與離線模式)
