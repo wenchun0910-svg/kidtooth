@@ -39,8 +39,9 @@
         let allRecords = []; // 存放從 Firebase 取得的所有記錄
 
         // Firebase 初始化
-     
-      const firebaseConfig = {
+        async function initFirebase() {
+            if (typeof __firebase_config !== 'undefined') {
+             const firebaseConfig = {
   apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
   authDomain: "kidtooth-23c63.firebaseapp.com",
   projectId: "kidtooth-23c63",
@@ -49,10 +50,10 @@
   appId: "1:967363107437:web:3a6e319362a9596793bd64"
 };
 
-       // 初始化 Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        window.db = getFirestore(app);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                window.db = getFirestore(app);
 
                 try {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
