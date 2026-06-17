@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生潔牙記錄表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // Tailwind 顏色配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cloud': '#FFFFFF', // 白雲底色
+                        'sky-light': '#E4F4FB', // 天空藍底色
+                        'title-blue': '#5C6D99', // 標題深藍色
+                        'pill-blue': '#798CAE', // 小標籤藍色
+                        'active-blue': '#52BEE8', // 潔牙完成的亮藍色
+                        'sakura': '#E8B4B8',
+                        'sakura-dark': '#C99A9D'
+                    },
+                    fontFamily: {
+                        sans: ['"Iansui"', '"Noto Sans TC"', 'sans-serif'],
+                        'bubbly': ['"Fredoka"', '"Iansui"', 'sans-serif']
+                    }
+                }
+            }
+        }
+
+        // Global 變數
+        window.db = null;
+        window.user = null;
+        window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let allRecords = []; // 存放從 Firebase 取得的所有記錄
+
+        // Firebase 初始化
+        async function initFirebase() {
+            if (typeof __firebase_config !== 'undefined') {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                window.db = getFirestore(app);
+
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (u) => {
+                        if (u) {
+                            window.user = u;
+                            loadRecordsFromFirebase();
+                        }
+                    });
+                } catch (error) {
+                    console.error("Firebase Auth Error:", error);
+                    showModal("系統錯誤", "無法連線至資料庫，請稍後再試。");
+                }
+            } else {
+                console.warn("未偵測到 Firebase 設定檔，目前以單機模式執行。");
+            }
+        }
+
+        // 從 Firebase 獲取所有紀錄 (監聽)
+        function loadRecordsFromFirebase() {
+            if (!window.user || !window.db) return;
+            const recordsRef = collection(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records');
+            
+            onSnapshot(recordsRef, (snapshot) => {
+                allRecords = [];
+                snapshot.forEach((doc) => {
+                    allRecords.push(doc.data());
+                });
+                // 依日期降冪排序
+                allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }, (error) => {
+                console.error("獲取資料失敗:", error);
+            });
+        }
+
+        // 儲存今日紀錄至 Firebase
+        window.saveRecordToFirebase = async function(today, brushedArray, total) {
+            if (!window.user || !window.db) {
+                showModal("提示", "目前處於離線狀態，無法將資料同步至雲端。");
+                return;
+            }
+            try {
+                const recordRef = doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', today);
+                await setDoc(recordRef, {
+                    date: today,
+                    brushed: brushedArray,
+                    total: total,
+                    timestamp: Date.now()
+                });
+                showModal("儲存成功", `今日 (${today}) 潔牙記錄已完成！\n完成人數：${brushedArray.length} / ${total}`);
+            } catch (error) {
+                console.error("儲存失敗:", error);
+                showModal("儲存失敗", "無法儲存記錄，請確認網路狀態。");
+            }
+        };
+
+        // 啟動 Firebase
+        initFirebase();
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Iansui&display=swap');
+
+        body {
+            background-color: #E4F4FB; /* 圖片的淡藍色背景 */
+            color: #5C6D99;
+            font-family: "Iansui", sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* 標題白底裝飾 */
+        .title-banner {
+            background-color: #FFFFFF;
+            border-radius: 40px;
+            position: relative;
+            box-shadow: 0 4px 0 rgba(200, 225, 240, 0.5);
+        }
+
+        .student-btn {
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .student-btn.active {
+            background-color: #52BEE8;
+            color: white;
+            transform: scale(1.15) rotate(-5deg);
+            border-color: #52BEE8;
+            box-shadow: 0 6px 12px -2px rgba(82, 190, 232, 0.5);
+        }
+
+        /* 隱藏預設捲軸但保留滾動功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 裝飾性浮動元素 */
+        .floating-deco {
+            position: absolute;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-24 relative">
+
+    <!-- 裝飾元素 (模擬圖片中的可愛插圖) -->
+    <div class="fixed top-10 left-4 sm:left-10 text-6xl floating-deco animate-bounce" style="animation-duration: 3s;">🪥</div>
+    <div class="fixed top-10 right-4 sm:right-10 text-6xl floating-deco animate-pulse" style="animation-duration: 4s;">🦷✨</div>
+    <div class="fixed bottom-4 left-4 sm:left-10 text-7xl floating-deco">🐱</div>
+    <div class="fixed bottom-4 right-4 sm:right-10 text-7xl floating-deco">🐶</div>
+
+    <!-- 頂部導航與操作列 (新版童趣設計) -->
+    <header class="relative z-10 pt-12 pb-6 px-4">
+        <div class="max-w-4xl mx-auto flex flex-col items-center">
+            
+            <!-- 標題橫幅 -->
+            <div class="title-banner w-full max-w-3xl py-6 px-4 text-center mt-6 relative border-4 border-white">
+                <!-- 頂部小標籤 (Healthy Habits for Kids) -->
+                <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-pill-blue text-white px-6 py-2 rounded-2xl font-bubbly text-sm sm:text-base tracking-wider shadow-sm flex items-center gap-2 whitespace-nowrap">
+                    <span class="w-3 h-3 bg-white/50 rounded-sm"></span>
+                    健康好習慣
+                </div>
+                
+                <h1 class="text-3xl sm:text-5xl font-bubbly font-bold text-title-blue tracking-wider mt-2 uppercase">
+                    學生潔牙記錄表
+                </h1>
+
+                <!-- 控制項整合在標題下方 -->
+                <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
+                    <div class="flex items-center bg-sky-light rounded-full px-4 py-2 shadow-inner border border-white">
+                        <label for="studentCountInput" class="text-sm sm:text-base font-bold text-title-blue mr-2 whitespace-nowrap">班級人數:</label>
+                        <input type="number" id="studentCountInput" min="1" max="100" class="w-16 bg-transparent text-center font-bold text-title-blue focus:outline-none text-lg" value="30">
+                    </div>
+
+                    <button id="endRecordBtn" class="bg-[#FF9F43] hover:bg-[#FF8C1A] text-white px-8 py-2 rounded-full font-bold shadow-[0_4px_0_#D97014] active:shadow-[0_0px_0_#D97014] active:translate-y-1 transition-all flex items-center justify-center gap-2 text-lg whitespace-nowrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        結束記錄
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要區域：學生按鈕網格 -->
+    <main class="max-w-4xl mx-auto px-4 py-4 relative z-10">
+        <div class="bg-white/90 backdrop-blur-sm rounded-[30px] shadow-sm p-6 sm:p-8 border-4 border-white relative overflow-hidden">
+            <div class="flex justify-between items-end mb-6 border-b-2 border-sky-light pb-4">
+                <div>
+                    <h2 class="text-xl font-bubbly font-bold text-title-blue flex items-center gap-2">
+                        <span class="text-2xl">🪥</span>
+                        今日打卡區
+                    </h2>
+                    <p class="text-sm text-title-blue/60 mt-1 font-bold" id="currentDateDisplay"></p>
+                </div>
+                <div class="text-right">
+                    <span class="text-sm text-title-blue/60 font-bold">已完成：</span>
+                    <span id="completedCount" class="text-3xl font-bubbly font-bold text-active-blue">0</span>
+                    <span id="totalCountDisplay" class="text-sm text-title-blue/40 font-bold">/30</span>
+                </div>
+            </div>
+
+            <!-- 學生按鈕容器 -->
+            <div id="studentGrid" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3 sm:gap-4 justify-items-center">
+                <!-- 按鈕由 JS 動態生成 -->
+            </div>
+        </div>
+
+        <!-- 查詢區塊 -->
+        <div class="mt-8 bg-white/90 backdrop-blur-sm rounded-[30px] shadow-sm p-6 sm:p-8 border-4 border-white relative">
+            <h2 class="text-xl font-bubbly font-bold text-title-blue mb-6 flex items-center gap-2">
+                <span class="text-2xl">🔍</span>
+                歷史資料查詢
+            </h2>
+
+            <!-- 頁籤切換 -->
+            <div class="flex border-b-2 border-sky-light mb-6">
+                <button id="tabStudent" class="px-4 py-2 border-b-4 border-active-blue text-active-blue font-bold font-bubbly text-lg rounded-t-lg transition-colors">依座號查詢</button>
+                <button id="tabPeriod" class="px-4 py-2 border-b-4 border-transparent text-title-blue/40 hover:text-title-blue/80 font-bold font-bubbly text-lg rounded-t-lg transition-colors">依週期查詢</button>
+            </div>
+
+            <!-- 座號查詢面板 -->
+            <div id="panelStudent" class="block">
+                <div class="flex items-center gap-3 mb-4">
+                    <input type="number" id="queryStudentId" placeholder="輸入座號" class="border-2 border-sky-light rounded-xl px-4 py-2 w-32 focus:outline-none focus:border-active-blue text-center font-bold text-title-blue bg-white">
+                    <button id="btnQueryStudent" class="bg-sky-light hover:bg-[#D0EBF7] text-title-blue font-bold px-6 py-2 rounded-xl transition-colors">查詢</button>
+                </div>
+                <div id="resultStudent" class="text-sm text-title-blue/80 bg-sky-light/50 p-4 rounded-2xl min-h-[100px] border-2 border-white font-bold flex items-center">
+                    請輸入座號以查詢該生近期的潔牙記錄。
+                </div>
+            </div>
+
+            <!-- 週期查詢面板 -->
+            <div id="panelPeriod" class="hidden">
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <input type="date" id="queryStartDate" class="border-2 border-sky-light rounded-xl px-4 py-2 focus:outline-none focus:border-active-blue text-title-blue font-bold bg-white">
+                    <span class="text-title-blue/40 font-bold">至</span>
+                    <input type="date" id="queryEndDate" class="border-2 border-sky-light rounded-xl px-4 py-2 focus:outline-none focus:border-active-blue text-title-blue font-bold bg-white">
+                    <button id="btnQueryPeriod" class="bg-sky-light hover:bg-[#D0EBF7] text-title-blue font-bold px-6 py-2 rounded-xl transition-colors">查詢</button>
+                </div>
+                <div id="resultPeriod" class="text-sm text-title-blue/80 bg-sky-light/50 p-4 rounded-2xl min-h-[100px] max-h-[300px] overflow-y-auto no-scrollbar border-2 border-white font-bold">
+                    請選擇日期區間以查詢班級紀錄。
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 右下角浮動：重置按鈕 -->
+    <button id="resetBtn" class="fixed bottom-8 right-8 bg-white border-4 border-[#FFD166] text-[#FFD166] hover:bg-[#FFD166] hover:text-white w-16 h-16 rounded-full shadow-xl flex flex-col items-center justify-center transition-all duration-300 z-50 group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="mb-0.5 group-hover:-rotate-180 transition-transform duration-700"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+        <span class="text-[10px] font-bold font-bubbly">重置</span>
+    </button>
+
+    <!-- 自訂提示框 Modal -->
+    <div id="customModal" class="fixed inset-0 bg-[#5C6D99]/40 backdrop-blur-sm z-[100] hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
+        <div class="bg-white rounded-[30px] shadow-2xl p-8 max-w-sm w-full transform scale-95 transition-transform duration-300 border-4 border-sky-light text-center" id="modalContent">
+            <h3 id="modalTitle" class="text-2xl font-bubbly font-bold text-title-blue mb-4 flex items-center justify-center gap-2"></h3>
+            <p id="modalMessage" class="text-title-blue/80 whitespace-pre-line leading-relaxed mb-8 font-bold"></p>
+            <div class="flex justify-center">
+                <button id="modalCloseBtn" class="bg-active-blue hover:bg-[#3FA9D4] text-white px-8 py-3 rounded-full font-bubbly font-bold text-lg shadow-[0_4px_0_#2B8CB5] active:shadow-[0_0px_0_#2B8CB5] active:translate-y-1 transition-all">太棒了 (OK)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 邏輯控制腳本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // UI 元素
+            const studentCountInput = document.getElementById('studentCountInput');
+            const studentGrid = document.getElementById('studentGrid');
+            const completedCount = document.getElementById('completedCount');
+            const totalCountDisplay = document.getElementById('totalCountDisplay');
+            const currentDateDisplay = document.getElementById('currentDateDisplay');
+            const endRecordBtn = document.getElementById('endRecordBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            
+            // 查詢元素
+            const tabStudent = document.getElementById('tabStudent');
+            const tabPeriod = document.getElementById('tabPeriod');
+            const panelStudent = document.getElementById('panelStudent');
+            const panelPeriod = document.getElementById('panelPeriod');
+            
+            // 狀態變數
+            let totalStudents = parseInt(localStorage.getItem('studentCount')) || 30;
+            let brushedStudents = new Set();
+            
+            // 顯示今日日期
+            const today = new Date();
+            currentDateDisplay.innerText = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+            
+            // 初始化
+            init();
+
+            function init() {
+                studentCountInput.value = totalStudents;
+                totalCountDisplay.innerText = `/${totalStudents}`;
+                renderGrid();
+            }
+
+            // 監聽人數輸入變更
+            studentCountInput.addEventListener('change', (e) => {
+                let val = parseInt(e.target.value);
+                if (isNaN(val) || val < 1) val = 1;
+                if (val > 100) val = 100;
+                
+                totalStudents = val;
+                studentCountInput.value = val;
+                localStorage.setItem('studentCount', val);
+                totalCountDisplay.innerText = `/${val}`;
+                
+                // 保留已選狀態，重新繪製
+                const tempBrushed = new Set([...brushedStudents].filter(id => id <= val));
+                brushedStudents = tempBrushed;
+                renderGrid();
+            });
+
+            // 繪製學生按鈕網格
+            function renderGrid() {
+                studentGrid.innerHTML = '';
+                for (let i = 1; i <= totalStudents; i++) {
+                    const btn = document.createElement('button');
+                    const isActive = brushedStudents.has(i);
+                    
+                    btn.className = `student-btn w-12 h-12 sm:w-14 sm:h-14 rounded-full border-4 text-lg sm:text-xl font-bold flex items-center justify-center font-bubbly
+                                     ${isActive ? 'active' : 'bg-white border-sky-light text-title-blue/40 hover:border-active-blue hover:text-active-blue'}`;
+                    btn.innerText = i;
+                    
+                    btn.onclick = () => toggleStudent(i, btn);
+                    studentGrid.appendChild(btn);
+                }
+                updateCounter();
+            }
+
+            // 切換潔牙狀態
+            function toggleStudent(id, btnElement) {
+                if (brushedStudents.has(id)) {
+                    brushedStudents.delete(id);
+                    btnElement.classList.remove('active');
+                    btnElement.className = `student-btn w-12 h-12 sm:w-14 sm:h-14 rounded-full border-4 text-lg sm:text-xl font-bold flex items-center justify-center font-bubbly bg-white border-sky-light text-title-blue/40 hover:border-active-blue hover:text-active-blue`;
+                } else {
+                    brushedStudents.add(id);
+                    btnElement.className = `student-btn w-12 h-12 sm:w-14 sm:h-14 rounded-full border-4 text-lg sm:text-xl font-bold flex items-center justify-center font-bubbly active`;
+                }
+                updateCounter();
+            }
+
+            function updateCounter() {
+                completedCount.innerText = brushedStudents.size;
+            }
+
+            // 結束記錄按鈕 (儲存)
+            endRecordBtn.addEventListener('click', () => {
+                const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const brushedArray = Array.from(brushedStudents).sort((a,b)=>a-b);
+                
+                // 呼叫 Firebase 模組內的函式
+                if (typeof window.saveRecordToFirebase === 'function') {
+                    window.saveRecordToFirebase(todayStr, brushedArray, totalStudents);
+                } else {
+                    showModal("系統提示", "資料庫尚未準備就緒。");
+                }
+            });
+
+            // 重置按鈕
+            resetBtn.addEventListener('click', () => {
+                brushedStudents.clear();
+                studentCountInput.value = 30; // 預設值
+                totalStudents = 30;
+                localStorage.setItem('studentCount', 30);
+                
+                // 清除查詢面板
+                document.getElementById('queryStudentId').value = '';
+                document.getElementById('queryStartDate').value = '';
+                document.getElementById('queryEndDate').value = '';
+                document.getElementById('resultStudent').innerHTML = '請輸入座號以查詢該生近期的潔牙記錄。';
+                document.getElementById('resultPeriod').innerHTML = '請選擇日期區間以查詢班級紀錄。';
+
+                init();
+                showModal("已重置", "畫面上所有的資料已清除歸零。");
+            });
+
+            /* ==== 查詢功能邏輯 ==== */
+            
+            // 頁籤切換
+            tabStudent.addEventListener('click', () => {
+                tabStudent.classList.add('border-active-blue', 'text-active-blue');
+                tabStudent.classList.remove('border-transparent', 'text-title-blue/40');
+                tabPeriod.classList.remove('border-active-blue', 'text-active-blue');
+                tabPeriod.classList.add('border-transparent', 'text-title-blue/40');
+                panelStudent.classList.remove('hidden');
+                panelPeriod.classList.add('hidden');
+            });
+
+            tabPeriod.addEventListener('click', () => {
+                tabPeriod.classList.add('border-active-blue', 'text-active-blue');
+                tabPeriod.classList.remove('border-transparent', 'text-title-blue/40');
+                tabStudent.classList.remove('border-active-blue', 'text-active-blue');
+                tabStudent.classList.add('border-transparent', 'text-title-blue/40');
+                panelPeriod.classList.remove('hidden');
+                panelStudent.classList.add('hidden');
+            });
+
+            // 查詢單一學生
+            document.getElementById('btnQueryStudent').addEventListener('click', () => {
+                const id = parseInt(document.getElementById('queryStudentId').value);
+                const resultDiv = document.getElementById('resultStudent');
+                
+                if (isNaN(id)) {
+                    resultDiv.innerHTML = '<span class="text-sakura-dark font-bold">請輸入有效的座號！</span>';
+                    return;
+                }
+
+                // 篩選包含該座號的紀錄
+                const matchedRecords = allRecords.filter(record => record.brushed && record.brushed.includes(id));
+                
+                if (matchedRecords.length === 0) {
+                    resultDiv.innerHTML = `找不到座號 <span class="font-bold text-active-blue">${id}</span> 的潔牙紀錄。`;
+                    return;
+                }
+
+                let html = `<div class="w-full"><p class="font-bold text-active-blue text-lg mb-3">座號 ${id} 的潔牙紀錄 (共 ${matchedRecords.length} 次)</p>`;
+                html += '<ul class="space-y-2">';
+                matchedRecords.forEach(r => {
+                    html += `<li class="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-sky-light">
+                                <span class="text-lg">✨</span>
+                                <span class="font-bold">${r.date}</span> 
+                                <span class="text-sm text-title-blue/60 ml-auto">(班級完成度: ${r.brushed.length}/${r.total})</span>
+                             </li>`;
+                });
+                html += '</ul></div>';
+                resultDiv.innerHTML = html;
+            });
+
+            // 查詢週期
+            document.getElementById('btnQueryPeriod').addEventListener('click', () => {
+                const start = document.getElementById('queryStartDate').value;
+                const end = document.getElementById('queryEndDate').value;
+                const resultDiv = document.getElementById('resultPeriod');
+
+                if (!start || !end) {
+                    resultDiv.innerHTML = '<span class="text-sakura-dark font-bold">請選擇完整的開始與結束日期！</span>';
+                    return;
+                }
+                if (start > end) {
+                    resultDiv.innerHTML = '<span class="text-sakura-dark font-bold">開始日期不能晚於結束日期！</span>';
+                    return;
+                }
+
+                const matchedRecords = allRecords.filter(record => record.date >= start && record.date <= end);
+                
+                if (matchedRecords.length === 0) {
+                    resultDiv.innerHTML = `在 ${start} 至 ${end} 期間無任何記錄。`;
+                    return;
+                }
+
+                let html = `<div class="w-full"><p class="font-bold text-active-blue text-lg mb-3">週期紀錄：${start} ~ ${end}</p>`;
+                html += '<div class="space-y-3">';
+                matchedRecords.forEach(r => {
+                    const unbrushed = [];
+                    for(let i=1; i<=r.total; i++) {
+                        if(!r.brushed.includes(i)) unbrushed.push(i);
+                    }
+                    html += `
+                        <div class="bg-white p-4 rounded-xl shadow-sm border-2 border-sky-light">
+                            <div class="font-bubbly font-bold text-title-blue text-lg mb-2 flex items-center gap-2">
+                                📅 ${r.date}
+                            </div>
+                            <div class="text-sm">
+                                <span class="text-active-blue font-bold bg-sky-light px-2 py-1 rounded">已潔牙 (${r.brushed.length})</span> 
+                                <span class="leading-relaxed mt-1 block font-normal">${r.brushed.join(', ') || '無'}</span>
+                            </div>
+                            <div class="text-sm mt-3">
+                                <span class="text-sakura-dark font-bold bg-[#FCE8E9] px-2 py-1 rounded">未潔牙 (${unbrushed.length})</span> 
+                                <span class="leading-relaxed mt-1 block font-normal">${unbrushed.join(', ') || '無'}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div></div>';
+                resultDiv.innerHTML = html;
+            });
+        });
+
+        // Modal 邏輯 (取代原生的 alert)
+        function showModal(title, message) {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            const titleEl = document.getElementById('modalTitle');
+            const messageEl = document.getElementById('modalMessage');
+            
+            titleEl.innerHTML = title;
+            messageEl.innerText = message;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // 延遲一下觸發動畫
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        document.getElementById('modalCloseBtn').addEventListener('click', () => {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            
+            modal.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300); // 配合 transition 時間
+        });
+    </script>
+</body>
+</html>
