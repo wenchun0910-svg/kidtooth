@@ -35,13 +35,11 @@
         // Global 變數
         window.db = null;
         window.user = null;
-        window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        window.appId = 'student-brushing-app'; // 您可以自訂您的應用程式 ID
         let allRecords = []; // 存放從 Firebase 取得的所有記錄
 
-        // Firebase 初始化
-        async function initFirebase() {
-          
-             const firebaseConfig = {
+        // 📝 請將以下內容替換為您在 Firebase 主控台取得的設定
+      const firebaseConfig = {
   apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
   authDomain: "kidtooth-23c63.firebaseapp.com",
   projectId: "kidtooth-23c63",
@@ -50,30 +48,26 @@
   appId: "1:967363107437:web:3a6e319362a9596793bd64"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+        // Firebase 初始化
+        async function initFirebase() {
+            try {
+                // 初始化 Firebase 應用程式
+                const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 window.db = getFirestore(app);
 
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                // 使用匿名登入 (確保能讀寫資料)
+                await signInAnonymously(auth);
 
-                    onAuthStateChanged(auth, (u) => {
-                        if (u) {
-                            window.user = u;
-                            loadRecordsFromFirebase();
-                        }
-                    });
-                } catch (error) {
-                    console.error("Firebase Auth Error:", error);
-                    showModal("系統錯誤", "無法連線至資料庫，請稍後再試。");
-                }
-            } else {
-                console.warn("未偵測到 Firebase 設定檔，目前以單機模式執行。");
+                onAuthStateChanged(auth, (u) => {
+                    if (u) {
+                        window.user = u;
+                        loadRecordsFromFirebase();
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase 初始化錯誤:", error);
+                showModal("系統錯誤", "無法連線至資料庫，請檢查 Firebase 設定是否正確。");
             }
         }
 
