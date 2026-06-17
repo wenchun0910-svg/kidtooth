@@ -41,10 +41,20 @@
         // Firebase 初始化
         async function initFirebase() {
             if (typeof __firebase_config !== 'undefined') {
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                window.db = getFirestore(app);
+          // 您的 Firebase 設定檔 (從 Firebase 控制台複製過來)
+      const firebaseConfig = {
+  apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
+  authDomain: "kidtooth-23c63.firebaseapp.com",
+  projectId: "kidtooth-23c63",
+  storageBucket: "kidtooth-23c63.firebasestorage.app",
+  messagingSenderId: "967363107437",
+  appId: "1:967363107437:web:3a6e319362a9596793bd64"
+};
+
+       // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.db = getFirestore(app);
 
                 try {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
