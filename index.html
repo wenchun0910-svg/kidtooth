@@ -39,7 +39,7 @@
         let allRecords = []; // 存放從 Firebase 取得的所有記錄
 
         // 📝 請將以下內容替換為您在 Firebase 主控台取得的設定
-      const firebaseConfig = {
+       const firebaseConfig = {
   apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
   authDomain: "kidtooth-23c63.firebaseapp.com",
   projectId: "kidtooth-23c63",
@@ -284,6 +284,156 @@
 
     <!-- 邏輯控制腳本 -->
     <script>
+        // Global 變數
+        window.db = null;
+        window.user = null;
+        window.appId = 'student-brushing-app'; // 您可以自訂您的應用程式 ID
+        window.allRecords = []; // 存放取得的所有記錄
+        window.isOfflineMode = false; // 離線單機模式旗標
+
+        // 📝 請將以下內容替換為您在 Firebase 主控台取得的設定
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Firebase 初始化 (加入防呆與離線模式)
+        async function initFirebase() {
+            // 檢查是否為預設的假憑證
+            const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+            
+            if (isConfigured) {
+                try {
+                    const app = window.initializeApp(firebaseConfig);
+                    const auth = window.getAuth(app);
+                    window.db = window.getFirestore(app);
+
+                    await window.signInAnonymously(auth);
+
+                    window.onAuthStateChanged(auth, (u) => {
+                        if (u) {
+                            window.user = u;
+                            loadRecordsFromFirebase();
+                        }
+                    });
+                } catch (error) {
+                    console.error("Firebase 連線錯誤，切換至單機模式:", error);
+                    enableOfflineMode();
+                }
+            } else {
+                console.warn("未偵測到真實的 Firebase 金鑰，已自動切換至「單機儲存模式 (LocalStorage)」");
+                enableOfflineMode();
+            }
+        }
+
+        function enableOfflineMode() {
+            window.isOfflineMode = true;
+            loadRecordsFromFirebase();
+        }
+
+        // 讀取紀錄 (支援 Firebase 或 單機模式)
+        function loadRecordsFromFirebase() {
+            if (window.isOfflineMode) {
+                const localRecs = JSON.parse(localStorage.getItem('localBrushingRecords') || '{}');
+                window.allRecords = Object.values(localRecs).sort((a, b) => new Date(b.date) - new Date(a.date));
+                return;
+            }
+
+            if (!window.user || !window.db) return;
+            const recordsRef = window.collection(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records');
+            
+            window.onSnapshot(recordsRef, (snapshot) => {
+                window.allRecords = [];
+                snapshot.forEach((doc) => {
+                    window.allRecords.push(doc.data());
+                });
+                window.allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                // 如果目前停留在查詢畫面，自動重整以顯示最新狀態
+                const panelPeriod = document.getElementById('panelPeriod');
+                if (panelPeriod && !panelPeriod.classList.contains('hidden')) {
+                    const start = document.getElementById('queryStartDate').value;
+                    const end = document.getElementById('queryEndDate').value;
+                    if (start && end) document.getElementById('btnQueryPeriod').click();
+                }
+            }, (error) => {
+                console.error("獲取資料失敗:", error);
+            });
+        }
+
+        // 儲存今日紀錄 (支援 Firebase 或 單機模式)
+        window.saveRecordToFirebase = async function(today, brushedArray, total) {
+            const recordData = {
+                date: today,
+                brushed: brushedArray,
+                total: total,
+                timestamp: Date.now()
+            };
+
+            if (window.isOfflineMode) {
+                let localRecs = JSON.parse(localStorage.getItem('localBrushingRecords') || '{}');
+                localRecs[today] = recordData;
+                localStorage.setItem('localBrushingRecords', JSON.stringify(localRecs));
+                loadRecordsFromFirebase(); // 重新載入
+                showModal("儲存成功 (單機模式)", `今日 (${today}) 潔牙記錄已保存在此瀏覽器！\n完成人數：${brushedArray.length} / ${total}`);
+                return;
+            }
+
+            if (!window.user || !window.db) return;
+
+            try {
+                const recordRef = window.doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', today);
+                await window.setDoc(recordRef, recordData);
+                showModal("儲存成功", `今日 (${today}) 潔牙記錄已同步至雲端！\n完成人數：${brushedArray.length} / ${total}`);
+            } catch (error) {
+                console.error("儲存失敗:", error);
+                showModal("儲存失敗", "無法儲存記錄，請確認網路狀態。");
+            }
+        };
+
+        // 🌟 新增：在歷史紀錄中直接點擊修改單一學生的狀態
+        window.toggleHistoryRecord = async function(dateStr, studentId) {
+            let record = window.allRecords.find(r => r.date === dateStr);
+            if (!record) return;
+            
+            // 切換該學生的狀態
+            let brushedSet = new Set(record.brushed);
+            if (brushedSet.has(studentId)) {
+                brushedSet.delete(studentId); // 取消潔牙
+            } else {
+                brushedSet.add(studentId);    // 補登潔牙
+            }
+            record.brushed = Array.from(brushedSet).sort((a,b)=>a-b);
+            
+            // 儲存變更
+            if (window.isOfflineMode) {
+                let localRecs = JSON.parse(localStorage.getItem('localBrushingRecords') || '{}');
+                localRecs[dateStr] = record;
+                localStorage.setItem('localBrushingRecords', JSON.stringify(localRecs));
+                loadRecordsFromFirebase(); // 重整內部陣列
+            } else if (window.db && window.user) {
+                try {
+                    const recordRef = window.doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', dateStr);
+                    await window.setDoc(recordRef, record);
+                } catch (e) {
+                    console.error("更新失敗", e);
+                }
+            }
+            
+            // 重新渲染查詢結果畫面
+            document.getElementById('btnQueryPeriod').click();
+            
+            // 如果修改的剛好是「今天」的紀錄，連動更新畫面上方的打卡區
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (dateStr === todayStr && typeof window.syncTodayViewFromHistory === 'function') {
+                window.syncTodayViewFromHistory(record.brushed);
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             // UI 元素
             const studentCountInput = document.getElementById('studentCountInput');
@@ -308,6 +458,12 @@
             const today = new Date();
             currentDateDisplay.innerText = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
             
+            // 提供全域函數供外部呼叫連動更新
+            window.syncTodayViewFromHistory = function(newBrushedArray) {
+                brushedStudents = new Set(newBrushedArray);
+                renderGrid();
+            };
+
             // 初始化
             init();
 
@@ -372,13 +528,7 @@
             endRecordBtn.addEventListener('click', () => {
                 const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
                 const brushedArray = Array.from(brushedStudents).sort((a,b)=>a-b);
-                
-                // 呼叫 Firebase 模組內的函式
-                if (typeof window.saveRecordToFirebase === 'function') {
-                    window.saveRecordToFirebase(todayStr, brushedArray, totalStudents);
-                } else {
-                    showModal("系統提示", "資料庫尚未準備就緒。");
-                }
+                window.saveRecordToFirebase(todayStr, brushedArray, totalStudents);
             });
 
             // 重置按鈕
@@ -430,8 +580,7 @@
                     return;
                 }
 
-                // 篩選包含該座號的紀錄
-                const matchedRecords = allRecords.filter(record => record.brushed && record.brushed.includes(id));
+                const matchedRecords = window.allRecords.filter(record => record.brushed && record.brushed.includes(id));
                 
                 if (matchedRecords.length === 0) {
                     resultDiv.innerHTML = `找不到座號 <span class="font-bold text-active-blue">${id}</span> 的潔牙紀錄。`;
@@ -451,7 +600,7 @@
                 resultDiv.innerHTML = html;
             });
 
-            // 查詢週期
+            // 查詢週期 (🌟 升級版：直接顯示全班按鈕並可修改)
             document.getElementById('btnQueryPeriod').addEventListener('click', () => {
                 const start = document.getElementById('queryStartDate').value;
                 const end = document.getElementById('queryEndDate').value;
@@ -466,35 +615,37 @@
                     return;
                 }
 
-                const matchedRecords = allRecords.filter(record => record.date >= start && record.date <= end);
+                const matchedRecords = window.allRecords.filter(record => record.date >= start && record.date <= end);
                 
                 if (matchedRecords.length === 0) {
                     resultDiv.innerHTML = `在 ${start} 至 ${end} 期間無任何記錄。`;
                     return;
                 }
 
-                let html = `<div class="w-full"><p class="font-bold text-active-blue text-lg mb-3">週期紀錄：${start} ~ ${end}</p>`;
-                html += '<div class="space-y-3">';
+                let html = `<div class="w-full"><p class="font-bold text-active-blue text-lg mb-3 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> 點擊按鈕可直接修改紀錄</p>`;
+                html += '<div class="space-y-4">';
+                
                 matchedRecords.forEach(r => {
-                    const unbrushed = [];
-                    for(let i=1; i<=r.total; i++) {
-                        if(!r.brushed.includes(i)) unbrushed.push(i);
+                    html += `<div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border-2 border-sky-light relative overflow-hidden">
+                                <div class="font-bubbly font-bold text-title-blue text-lg mb-4 flex items-center justify-between border-b-2 border-sky-light pb-3">
+                                    <span>📅 ${r.date}</span>
+                                    <span class="text-sm bg-[#E4F4FB] px-3 py-1 rounded-full text-active-blue font-bold tracking-wide">已潔牙: ${r.brushed.length} / ${r.total}</span>
+                                </div>
+                                <div class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 sm:gap-3 justify-items-center">`;
+                    
+                    // 繪製該日期的全班小按鈕
+                    for(let i = 1; i <= r.total; i++) {
+                        const isBrushed = r.brushed.includes(i);
+                        // 按鈕樣式 (依據狀態變化)
+                        const btnClass = isBrushed 
+                            ? 'bg-active-blue text-white border-active-blue shadow-md transform scale-105 rotate-[-3deg]' 
+                            : 'bg-white text-title-blue/40 border-sky-light hover:border-active-blue hover:text-active-blue';
+                            
+                        html += `<button onclick="toggleHistoryRecord('${r.date}', ${i})" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 text-sm sm:text-base font-bold flex items-center justify-center font-bubbly transition-all duration-300 ${btnClass}">${i}</button>`;
                     }
-                    html += `
-                        <div class="bg-white p-4 rounded-xl shadow-sm border-2 border-sky-light">
-                            <div class="font-bubbly font-bold text-title-blue text-lg mb-2 flex items-center gap-2">
-                                📅 ${r.date}
-                            </div>
-                            <div class="text-sm">
-                                <span class="text-active-blue font-bold bg-sky-light px-2 py-1 rounded">已潔牙 (${r.brushed.length})</span> 
-                                <span class="leading-relaxed mt-1 block font-normal">${r.brushed.join(', ') || '無'}</span>
-                            </div>
-                            <div class="text-sm mt-3">
-                                <span class="text-sakura-dark font-bold bg-[#FCE8E9] px-2 py-1 rounded">未潔牙 (${unbrushed.length})</span> 
-                                <span class="leading-relaxed mt-1 block font-normal">${unbrushed.join(', ') || '無'}</span>
-                            </div>
-                        </div>
-                    `;
+                    
+                    html += `   </div>
+                             </div>`;
                 });
                 html += '</div></div>';
                 resultDiv.innerHTML = html;
@@ -534,6 +685,9 @@
                 modal.classList.remove('flex');
             }, 300); // 配合 transition 時間
         });
+        
+        // 啟動 Firebase 或 離線模式
+        initFirebase();
     </script>
 </body>
 </html>
