@@ -39,7 +39,7 @@
         let allRecords = []; // 存放從 Firebase 取得的所有記錄
 
         // 📝 請將以下內容替換為您在 Firebase 主控台取得的設定
-    const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
   authDomain: "kidtooth-23c63.firebaseapp.com",
   projectId: "kidtooth-23c63",
@@ -283,7 +283,11 @@
     </div>
 
     <!-- 邏輯控制腳本 -->
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
         // Global 變數
         window.db = null;
         window.user = null;
@@ -308,13 +312,14 @@
             
             if (isConfigured) {
                 try {
-                    const app = window.initializeApp(firebaseConfig);
-                    const auth = window.getAuth(app);
-                    window.db = window.getFirestore(app);
+                    // 修正：移除多餘的 window. 前綴
+                    const app = initializeApp(firebaseConfig);
+                    const auth = getAuth(app);
+                    window.db = getFirestore(app);
 
-                    await window.signInAnonymously(auth);
+                    await signInAnonymously(auth);
 
-                    window.onAuthStateChanged(auth, (u) => {
+                    onAuthStateChanged(auth, (u) => {
                         if (u) {
                             window.user = u;
                             loadRecordsFromFirebase();
@@ -344,12 +349,13 @@
             }
 
             if (!window.user || !window.db) return;
-            const recordsRef = window.collection(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records');
+            // 修正：移除多餘的 window. 前綴
+            const recordsRef = collection(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records');
             
-            window.onSnapshot(recordsRef, (snapshot) => {
+            onSnapshot(recordsRef, (snapshot) => {
                 window.allRecords = [];
-                snapshot.forEach((doc) => {
-                    window.allRecords.push(doc.data());
+                snapshot.forEach((docSnap) => {
+                    window.allRecords.push(docSnap.data());
                 });
                 window.allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
                 
@@ -386,8 +392,9 @@
             if (!window.user || !window.db) return;
 
             try {
-                const recordRef = window.doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', today);
-                await window.setDoc(recordRef, recordData);
+                // 修正：移除多餘的 window. 前綴
+                const recordRef = doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', today);
+                await setDoc(recordRef, recordData);
                 showModal("儲存成功", `今日 (${today}) 潔牙記錄已同步至雲端！\n完成人數：${brushedArray.length} / ${total}`);
             } catch (error) {
                 console.error("儲存失敗:", error);
@@ -417,8 +424,9 @@
                 loadRecordsFromFirebase(); // 重整內部陣列
             } else if (window.db && window.user) {
                 try {
-                    const recordRef = window.doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', dateStr);
-                    await window.setDoc(recordRef, record);
+                    // 修正：移除多餘的 window. 前綴
+                    const recordRef = doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', dateStr);
+                    await setDoc(recordRef, record);
                 } catch (e) {
                     console.error("更新失敗", e);
                 }
