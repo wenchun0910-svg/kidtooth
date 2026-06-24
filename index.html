@@ -39,14 +39,14 @@
         let allRecords = []; // 存放從 Firebase 取得的所有記錄
 
         // 📝 請將以下內容替換為您在 Firebase 主控台取得的設定
-  const firebaseConfig = {
-  apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
-  authDomain: "kidtooth-23c63.firebaseapp.com",
-  projectId: "kidtooth-23c63",
-  storageBucket: "kidtooth-23c63.firebasestorage.app",
-  messagingSenderId: "967363107437",
-  appId: "1:967363107437:web:3a6e319362a9596793bd64"
-};
+       const firebaseConfig = {
+            apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
+            authDomain: "kidtooth-23c63.firebaseapp.com",
+            projectId: "kidtooth-23c63",
+            storageBucket: "kidtooth-23c63.firebasestorage.app",
+            messagingSenderId: "967363107437",
+            appId: "1:967363107437:web:3a6e319362a9596793bd64"
+        };
 
 
         // Firebase 初始化
@@ -188,11 +188,16 @@
                 </h1>
 
                 <!-- 控制項整合在標題下方 -->
-                <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
+                <div class="mt-6 flex flex-wrap justify-center items-center gap-3 sm:gap-4">
                     <div class="flex items-center bg-sky-light rounded-full px-4 py-2 shadow-inner border border-white">
                         <label for="studentCountInput" class="text-sm sm:text-base font-bold text-title-blue mr-2 whitespace-nowrap">班級人數:</label>
                         <input type="number" id="studentCountInput" min="1" max="100" class="w-16 bg-transparent text-center font-bold text-title-blue focus:outline-none text-lg" value="30">
                     </div>
+
+                    <!-- 新增：開啟查詢頁框的按鈕 -->
+                    <button id="openQueryBtn" class="bg-white hover:bg-sky-light text-title-blue px-6 py-2 rounded-full font-bold shadow-sm active:shadow-none active:translate-y-1 transition-all flex items-center justify-center gap-2 text-lg whitespace-nowrap border-2 border-sky-light">
+                        🔍 歷史查詢
+                    </button>
 
                     <button id="endRecordBtn" class="bg-[#FF9F43] hover:bg-[#FF8C1A] text-white px-8 py-2 rounded-full font-bold shadow-[0_4px_0_#D97014] active:shadow-[0_0px_0_#D97014] active:translate-y-1 transition-all flex items-center justify-center gap-2 text-lg whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -226,44 +231,6 @@
                 <!-- 按鈕由 JS 動態生成 -->
             </div>
         </div>
-
-        <!-- 查詢區塊 -->
-        <div class="mt-8 bg-white/90 backdrop-blur-sm rounded-[30px] shadow-sm p-6 sm:p-8 border-4 border-white relative">
-            <h2 class="text-xl font-bubbly font-bold text-title-blue mb-6 flex items-center gap-2">
-                <span class="text-2xl">🔍</span>
-                歷史資料查詢
-            </h2>
-
-            <!-- 頁籤切換 -->
-            <div class="flex border-b-2 border-sky-light mb-6">
-                <button id="tabStudent" class="px-4 py-2 border-b-4 border-active-blue text-active-blue font-bold font-bubbly text-lg rounded-t-lg transition-colors">依座號查詢</button>
-                <button id="tabPeriod" class="px-4 py-2 border-b-4 border-transparent text-title-blue/40 hover:text-title-blue/80 font-bold font-bubbly text-lg rounded-t-lg transition-colors">依週期查詢</button>
-            </div>
-
-            <!-- 座號查詢面板 -->
-            <div id="panelStudent" class="block">
-                <div class="flex items-center gap-3 mb-4">
-                    <input type="number" id="queryStudentId" placeholder="輸入座號" class="border-2 border-sky-light rounded-xl px-4 py-2 w-32 focus:outline-none focus:border-active-blue text-center font-bold text-title-blue bg-white">
-                    <button id="btnQueryStudent" class="bg-sky-light hover:bg-[#D0EBF7] text-title-blue font-bold px-6 py-2 rounded-xl transition-colors">查詢</button>
-                </div>
-                <div id="resultStudent" class="text-sm text-title-blue/80 bg-sky-light/50 p-4 rounded-2xl min-h-[100px] border-2 border-white font-bold flex items-center">
-                    請輸入座號以查詢該生近期的潔牙記錄。
-                </div>
-            </div>
-
-            <!-- 週期查詢面板 -->
-            <div id="panelPeriod" class="hidden">
-                <div class="flex flex-wrap items-center gap-3 mb-4">
-                    <input type="date" id="queryStartDate" class="border-2 border-sky-light rounded-xl px-4 py-2 focus:outline-none focus:border-active-blue text-title-blue font-bold bg-white">
-                    <span class="text-title-blue/40 font-bold">至</span>
-                    <input type="date" id="queryEndDate" class="border-2 border-sky-light rounded-xl px-4 py-2 focus:outline-none focus:border-active-blue text-title-blue font-bold bg-white">
-                    <button id="btnQueryPeriod" class="bg-sky-light hover:bg-[#D0EBF7] text-title-blue font-bold px-6 py-2 rounded-xl transition-colors">查詢</button>
-                </div>
-                <div id="resultPeriod" class="text-sm text-title-blue/80 bg-sky-light/50 p-4 rounded-2xl min-h-[100px] max-h-[300px] overflow-y-auto no-scrollbar border-2 border-white font-bold">
-                    請選擇日期區間以查詢班級紀錄。
-                </div>
-            </div>
-        </div>
     </main>
 
     <!-- 右下角浮動：重置按鈕 -->
@@ -271,6 +238,55 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="mb-0.5 group-hover:-rotate-180 transition-transform duration-700"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
         <span class="text-[10px] font-bold font-bubbly">重置</span>
     </button>
+
+    <!-- 查詢專用頁框 (Query Modal) -->
+    <div id="queryModal" class="fixed inset-0 bg-[#5C6D99]/60 backdrop-blur-sm z-[90] hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4 py-6">
+        <div class="bg-white/95 backdrop-blur-md rounded-[30px] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300 border-4 border-white relative overflow-hidden" id="queryModalContent">
+            
+            <!-- 關閉按鈕 -->
+            <button id="closeQueryBtn" class="absolute top-4 right-4 z-10 text-title-blue/60 hover:text-sakura-dark text-3xl font-bold bg-sky-light hover:bg-[#FCE8E9] w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-sm">
+                &times;
+            </button>
+
+            <!-- 標題與內容區 (可滾動) -->
+            <div class="p-6 sm:p-8 overflow-y-auto no-scrollbar flex-1 mt-4 sm:mt-0">
+                <h2 class="text-2xl font-bubbly font-bold text-title-blue mb-6 flex items-center gap-2">
+                    <span class="text-3xl">🔍</span>
+                    歷史資料查詢
+                </h2>
+
+                <!-- 頁籤切換 -->
+                <div class="flex border-b-2 border-sky-light mb-6">
+                    <button id="tabStudent" class="px-4 py-2 border-b-4 border-active-blue text-active-blue font-bold font-bubbly text-lg rounded-t-lg transition-colors">依座號查詢</button>
+                    <button id="tabPeriod" class="px-4 py-2 border-b-4 border-transparent text-title-blue/40 hover:text-title-blue/80 font-bold font-bubbly text-lg rounded-t-lg transition-colors">依週期查詢</button>
+                </div>
+
+                <!-- 座號查詢面板 -->
+                <div id="panelStudent" class="block">
+                    <div class="flex items-center gap-3 mb-4">
+                        <input type="number" id="queryStudentId" placeholder="輸入座號" class="border-2 border-sky-light rounded-xl px-4 py-2 w-32 focus:outline-none focus:border-active-blue text-center font-bold text-title-blue bg-white">
+                        <button id="btnQueryStudent" class="bg-sky-light hover:bg-[#D0EBF7] text-title-blue font-bold px-6 py-2 rounded-xl transition-colors">查詢</button>
+                    </div>
+                    <div id="resultStudent" class="text-sm text-title-blue/80 bg-sky-light/50 p-4 rounded-2xl min-h-[100px] border-2 border-white font-bold flex items-center">
+                        請輸入座號以查詢該生近期的潔牙記錄。
+                    </div>
+                </div>
+
+                <!-- 週期查詢面板 -->
+                <div id="panelPeriod" class="hidden">
+                    <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <input type="date" id="queryStartDate" class="border-2 border-sky-light rounded-xl px-4 py-2 focus:outline-none focus:border-active-blue text-title-blue font-bold bg-white">
+                        <span class="text-title-blue/40 font-bold">至</span>
+                        <input type="date" id="queryEndDate" class="border-2 border-sky-light rounded-xl px-4 py-2 focus:outline-none focus:border-active-blue text-title-blue font-bold bg-white">
+                        <button id="btnQueryPeriod" class="bg-sky-light hover:bg-[#D0EBF7] text-title-blue font-bold px-6 py-2 rounded-xl transition-colors">查詢</button>
+                    </div>
+                    <div id="resultPeriod" class="text-sm text-title-blue/80 bg-sky-light/50 p-4 rounded-2xl min-h-[100px] border-2 border-white font-bold">
+                        請選擇日期區間以查詢班級紀錄。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 自訂提示框 Modal -->
     <div id="customModal" class="fixed inset-0 bg-[#5C6D99]/40 backdrop-blur-sm z-[100] hidden flex-col items-center justify-center opacity-0 transition-opacity duration-300 px-4">
@@ -455,6 +471,10 @@
             const resetBtn = document.getElementById('resetBtn');
             
             // 查詢元素
+            const openQueryBtn = document.getElementById('openQueryBtn');
+            const closeQueryBtn = document.getElementById('closeQueryBtn');
+            const queryModal = document.getElementById('queryModal');
+            const queryModalContent = document.getElementById('queryModalContent');
             const tabStudent = document.getElementById('tabStudent');
             const tabPeriod = document.getElementById('tabPeriod');
             const panelStudent = document.getElementById('panelStudent');
@@ -560,6 +580,34 @@
 
                 init();
                 showModal("已重置", "畫面上所有的資料已清除歸零。");
+            });
+
+            /* ==== 查詢頁框開啟/關閉邏輯 ==== */
+            openQueryBtn.addEventListener('click', () => {
+                queryModal.classList.remove('hidden');
+                queryModal.classList.add('flex');
+                setTimeout(() => {
+                    queryModal.classList.remove('opacity-0');
+                    queryModalContent.classList.remove('scale-95');
+                    queryModalContent.classList.add('scale-100');
+                }, 10);
+            });
+
+            closeQueryBtn.addEventListener('click', () => {
+                queryModal.classList.add('opacity-0');
+                queryModalContent.classList.remove('scale-100');
+                queryModalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    queryModal.classList.add('hidden');
+                    queryModal.classList.remove('flex');
+                }, 300);
+            });
+
+            // 點擊頁框外部背景也可關閉
+            queryModal.addEventListener('click', (e) => {
+                if (e.target === queryModal) {
+                    closeQueryBtn.click();
+                }
             });
 
             /* ==== 查詢功能邏輯 ==== */
