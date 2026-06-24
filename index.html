@@ -5,12 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>學生潔牙記錄表</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+    <script>
         // Tailwind 顏色配置
         tailwind.config = {
             theme: {
@@ -31,86 +27,6 @@
                 }
             }
         }
-
-        // Global 變數
-        window.db = null;
-        window.user = null;
-        window.appId = 'student-brushing-app'; // 您可以自訂您的應用程式 ID
-        let allRecords = []; // 存放從 Firebase 取得的所有記錄
-
-        // 📝 請將以下內容替換為您在 Firebase 主控台取得的設定
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        // Firebase 初始化
-        async function initFirebase() {
-            try {
-                // 初始化 Firebase 應用程式
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                window.db = getFirestore(app);
-
-                // 使用匿名登入 (確保能讀寫資料)
-                await signInAnonymously(auth);
-
-                onAuthStateChanged(auth, (u) => {
-                    if (u) {
-                        window.user = u;
-                        loadRecordsFromFirebase();
-                    }
-                });
-            } catch (error) {
-                console.error("Firebase 初始化錯誤:", error);
-                showModal("系統錯誤", "無法連線至資料庫，請檢查 Firebase 設定是否正確。");
-            }
-        }
-
-        // 從 Firebase 獲取所有紀錄 (監聽)
-        function loadRecordsFromFirebase() {
-            if (!window.user || !window.db) return;
-            const recordsRef = collection(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records');
-            
-            onSnapshot(recordsRef, (snapshot) => {
-                allRecords = [];
-                snapshot.forEach((doc) => {
-                    allRecords.push(doc.data());
-                });
-                // 依日期降冪排序
-                allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
-            }, (error) => {
-                console.error("獲取資料失敗:", error);
-            });
-        }
-
-        // 儲存今日紀錄至 Firebase
-        window.saveRecordToFirebase = async function(today, brushedArray, total) {
-            if (!window.user || !window.db) {
-                showModal("提示", "目前處於離線狀態，無法將資料同步至雲端。");
-                return;
-            }
-            try {
-                const recordRef = doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', today);
-                await setDoc(recordRef, {
-                    date: today,
-                    brushed: brushedArray,
-                    total: total,
-                    timestamp: Date.now()
-                });
-                showModal("儲存成功", `今日 (${today}) 潔牙記錄已完成！\n完成人數：${brushedArray.length} / ${total}`);
-            } catch (error) {
-                console.error("儲存失敗:", error);
-                showModal("儲存失敗", "無法儲存記錄，請確認網路狀態。");
-            }
-        };
-
-        // 啟動 Firebase
-        initFirebase();
     </script>
 
     <style>
@@ -170,13 +86,12 @@
     <div class="fixed bottom-4 left-4 sm:left-10 text-7xl floating-deco">🐱</div>
     <div class="fixed bottom-4 right-4 sm:right-10 text-7xl floating-deco">🐶</div>
 
-    <!-- 頂部導航與操作列 (新版童趣設計) -->
+    <!-- 頂部導航與操作列 -->
     <header class="relative z-10 pt-12 pb-6 px-4">
         <div class="max-w-4xl mx-auto flex flex-col items-center">
             
             <!-- 標題橫幅 -->
             <div class="title-banner w-full max-w-3xl py-6 px-4 text-center mt-6 relative border-4 border-white">
-                <!-- 頂部小標籤 (Healthy Habits for Kids) -->
                 <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-pill-blue text-white px-6 py-2 rounded-2xl font-bubbly text-sm sm:text-base tracking-wider shadow-sm flex items-center gap-2 whitespace-nowrap">
                     <span class="w-3 h-3 bg-white/50 rounded-sm"></span>
                     健康好習慣
@@ -186,14 +101,14 @@
                     學生潔牙記錄表
                 </h1>
 
-                <!-- 控制項整合在標題下方 -->
+                <!-- 控制項 -->
                 <div class="mt-6 flex flex-wrap justify-center items-center gap-3 sm:gap-4">
                     <div class="flex items-center bg-sky-light rounded-full px-4 py-2 shadow-inner border border-white">
                         <label for="studentCountInput" class="text-sm sm:text-base font-bold text-title-blue mr-2 whitespace-nowrap">班級人數:</label>
                         <input type="number" id="studentCountInput" min="1" max="100" class="w-16 bg-transparent text-center font-bold text-title-blue focus:outline-none text-lg" value="30">
                     </div>
 
-                    <!-- 新增：開啟查詢頁框的按鈕 -->
+                    <!-- 開啟查詢頁框的按鈕 -->
                     <button id="openQueryBtn" class="bg-white hover:bg-sky-light text-title-blue px-6 py-2 rounded-full font-bold shadow-sm active:shadow-none active:translate-y-1 transition-all flex items-center justify-center gap-2 text-lg whitespace-nowrap border-2 border-sky-light">
                         🔍 歷史查詢
                     </button>
@@ -300,18 +215,18 @@
 
     <!-- 邏輯控制腳本 -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // Global 變數
         window.db = null;
         window.user = null;
-        window.appId = 'student-brushing-app'; // 您可以自訂您的應用程式 ID
-        window.allRecords = []; // 存放取得的所有記錄
-        window.isOfflineMode = false; // 離線單機模式旗標
+        window.appId = 'student-brushing-app'; 
+        window.allRecords = []; 
+        window.isOfflineMode = false; 
 
-        // 📝 已替換為您的專屬 Firebase 設定
+        // 📝 專屬 Firebase 設定
     const firebaseConfig = {
             apiKey: "AIzaSyBZHeBBnPXh3ATKY4GH_liNq_9AHJS3vMQ",
             authDomain: "kidtooth-23c63.firebaseapp.com",
@@ -322,32 +237,39 @@
         };
 
 
-        // Firebase 初始化 (加入防呆與離線模式)
+        // Firebase 初始化 (加入防重複連線保護機制)
         async function initFirebase() {
-            // 檢查是否為預設的假憑證
-            const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
-            
-            if (isConfigured) {
-                try {
-                    // 修正：移除多餘的 window. 前綴
-                    const app = initializeApp(firebaseConfig);
-                    const auth = getAuth(app);
-                    window.db = getFirestore(app);
-
-                    await signInAnonymously(auth);
-
-                    onAuthStateChanged(auth, (u) => {
-                        if (u) {
-                            window.user = u;
-                            loadRecordsFromFirebase();
-                        }
-                    });
-                } catch (error) {
-                    console.error("Firebase 連線錯誤，切換至單機模式:", error);
-                    enableOfflineMode();
+            try {
+                // 防呆機制：如果已經初始化過，就取得舊有的，避免發生 already exists 錯誤
+                let app;
+                if (getApps().length === 0) {
+                    app = initializeApp(firebaseConfig);
+                } else {
+                    app = getApp();
                 }
-            } else {
-                console.warn("未偵測到真實的 Firebase 金鑰，已自動切換至「單機儲存模式 (LocalStorage)」");
+                
+                const auth = getAuth(app);
+                window.db = getFirestore(app);
+
+                await signInAnonymously(auth);
+
+                onAuthStateChanged(auth, (u) => {
+                    if (u) {
+                        window.user = u;
+                        loadRecordsFromFirebase();
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase 連線錯誤:", error);
+                let errorMsg = "無法連線至雲端資料庫，已暫時切換為單機模式。\n\n";
+                if (error.code === 'auth/operation-not-allowed') {
+                    errorMsg += "⚠️ 原因：Firebase 未啟用「匿名登入」。\n👉 請至 Authentication > Sign-in method 開啟。";
+                } else if (error.message && error.message.includes("Missing or insufficient permissions")) {
+                    errorMsg += "⚠️ 原因：資料庫權限未開放。\n👉 請至 Firestore Database > Rules 設定開放。";
+                } else {
+                    errorMsg += `⚠️ 原因：${error.message}`;
+                }
+                showModal("雲端連線失敗", errorMsg);
                 enableOfflineMode();
             }
         }
@@ -357,7 +279,7 @@
             loadRecordsFromFirebase();
         }
 
-        // 讀取紀錄 (支援 Firebase 或 單機模式)
+        // 讀取紀錄
         function loadRecordsFromFirebase() {
             if (window.isOfflineMode) {
                 const localRecs = JSON.parse(localStorage.getItem('localBrushingRecords') || '{}');
@@ -366,7 +288,7 @@
             }
 
             if (!window.user || !window.db) return;
-            // 修正：移除多餘的 window. 前綴
+            
             const recordsRef = collection(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records');
             
             onSnapshot(recordsRef, (snapshot) => {
@@ -376,7 +298,6 @@
                 });
                 window.allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
                 
-                // 如果目前停留在查詢畫面，自動重整以顯示最新狀態
                 const panelPeriod = document.getElementById('panelPeriod');
                 if (panelPeriod && !panelPeriod.classList.contains('hidden')) {
                     const start = document.getElementById('queryStartDate').value;
@@ -388,7 +309,7 @@
             });
         }
 
-        // 儲存今日紀錄 (支援 Firebase 或 單機模式)
+        // 儲存今日紀錄
         window.saveRecordToFirebase = async function(today, brushedArray, total) {
             const recordData = {
                 date: today,
@@ -401,7 +322,7 @@
                 let localRecs = JSON.parse(localStorage.getItem('localBrushingRecords') || '{}');
                 localRecs[today] = recordData;
                 localStorage.setItem('localBrushingRecords', JSON.stringify(localRecs));
-                loadRecordsFromFirebase(); // 重新載入
+                loadRecordsFromFirebase(); 
                 showModal("儲存成功 (單機模式)", `今日 (${today}) 潔牙記錄已保存在此瀏覽器！\n完成人數：${brushedArray.length} / ${total}`);
                 return;
             }
@@ -409,39 +330,39 @@
             if (!window.user || !window.db) return;
 
             try {
-                // 修正：移除多餘的 window. 前綴
                 const recordRef = doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', today);
                 await setDoc(recordRef, recordData);
                 showModal("儲存成功", `今日 (${today}) 潔牙記錄已同步至雲端！\n完成人數：${brushedArray.length} / ${total}`);
             } catch (error) {
                 console.error("儲存失敗:", error);
-                showModal("儲存失敗", "無法儲存記錄，請確認網路狀態。");
+                let errorMsg = "無法儲存記錄，請確認網路狀態。\n";
+                if(error.message && error.message.includes("Missing or insufficient permissions")) {
+                    errorMsg = "⚠️ 儲存失敗：資料庫權限未開放！\n👉 請至 Firebase 設定 allow read, write: if true;";
+                }
+                showModal("儲存失敗", errorMsg);
             }
         };
 
-        // 🌟 新增：在歷史紀錄中直接點擊修改單一學生的狀態
+        // 歷史紀錄修改
         window.toggleHistoryRecord = async function(dateStr, studentId) {
             let record = window.allRecords.find(r => r.date === dateStr);
             if (!record) return;
             
-            // 切換該學生的狀態
             let brushedSet = new Set(record.brushed);
             if (brushedSet.has(studentId)) {
-                brushedSet.delete(studentId); // 取消潔牙
+                brushedSet.delete(studentId); 
             } else {
-                brushedSet.add(studentId);    // 補登潔牙
+                brushedSet.add(studentId);    
             }
             record.brushed = Array.from(brushedSet).sort((a,b)=>a-b);
             
-            // 儲存變更
             if (window.isOfflineMode) {
                 let localRecs = JSON.parse(localStorage.getItem('localBrushingRecords') || '{}');
                 localRecs[dateStr] = record;
                 localStorage.setItem('localBrushingRecords', JSON.stringify(localRecs));
-                loadRecordsFromFirebase(); // 重整內部陣列
+                loadRecordsFromFirebase(); 
             } else if (window.db && window.user) {
                 try {
-                    // 修正：移除多餘的 window. 前綴
                     const recordRef = doc(window.db, 'artifacts', window.appId, 'users', window.user.uid, 'brushing_records', dateStr);
                     await setDoc(recordRef, record);
                 } catch (e) {
@@ -449,10 +370,8 @@
                 }
             }
             
-            // 重新渲染查詢結果畫面
             document.getElementById('btnQueryPeriod').click();
             
-            // 如果修改的剛好是「今天」的紀錄，連動更新畫面上方的打卡區
             const now = new Date();
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             if (dateStr === todayStr && typeof window.syncTodayViewFromHistory === 'function') {
@@ -461,7 +380,6 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            // UI 元素
             const studentCountInput = document.getElementById('studentCountInput');
             const studentGrid = document.getElementById('studentGrid');
             const completedCount = document.getElementById('completedCount');
@@ -470,7 +388,6 @@
             const endRecordBtn = document.getElementById('endRecordBtn');
             const resetBtn = document.getElementById('resetBtn');
             
-            // 查詢元素
             const openQueryBtn = document.getElementById('openQueryBtn');
             const closeQueryBtn = document.getElementById('closeQueryBtn');
             const queryModal = document.getElementById('queryModal');
@@ -480,21 +397,17 @@
             const panelStudent = document.getElementById('panelStudent');
             const panelPeriod = document.getElementById('panelPeriod');
             
-            // 狀態變數
             let totalStudents = parseInt(localStorage.getItem('studentCount')) || 30;
             let brushedStudents = new Set();
             
-            // 顯示今日日期
             const today = new Date();
             currentDateDisplay.innerText = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
             
-            // 提供全域函數供外部呼叫連動更新
             window.syncTodayViewFromHistory = function(newBrushedArray) {
                 brushedStudents = new Set(newBrushedArray);
                 renderGrid();
             };
 
-            // 初始化
             init();
 
             function init() {
@@ -503,7 +416,6 @@
                 renderGrid();
             }
 
-            // 監聽人數輸入變更
             studentCountInput.addEventListener('change', (e) => {
                 let val = parseInt(e.target.value);
                 if (isNaN(val) || val < 1) val = 1;
@@ -514,20 +426,17 @@
                 localStorage.setItem('studentCount', val);
                 totalCountDisplay.innerText = `/${val}`;
                 
-                // 保留已選狀態，重新繪製
                 const tempBrushed = new Set([...brushedStudents].filter(id => id <= val));
                 brushedStudents = tempBrushed;
                 renderGrid();
             });
 
-            // 繪製學生按鈕網格
             function renderGrid() {
                 studentGrid.innerHTML = '';
                 for (let i = 1; i <= totalStudents; i++) {
                     const btn = document.createElement('button');
                     const isActive = brushedStudents.has(i);
                     
-                    // 這裡加大了寬高 (w-16 h-16 到 w-20 h-20) 及字體大小 (text-2xl sm:text-3xl)
                     btn.className = `student-btn w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 text-2xl sm:text-3xl font-bold flex items-center justify-center font-bubbly
                                      ${isActive ? 'active' : 'bg-white border-sky-light text-title-blue/40 hover:border-active-blue hover:text-active-blue'}`;
                     btn.innerText = i;
@@ -538,7 +447,6 @@
                 updateCounter();
             }
 
-            // 切換潔牙狀態
             function toggleStudent(id, btnElement) {
                 if (brushedStudents.has(id)) {
                     brushedStudents.delete(id);
@@ -555,23 +463,19 @@
                 completedCount.innerText = brushedStudents.size;
             }
 
-            // 結束記錄按鈕 (儲存)
             endRecordBtn.addEventListener('click', () => {
-                // 改用本地時間來獲取正確的 YYYY-MM-DD
                 const now = new Date();
                 const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
                 const brushedArray = Array.from(brushedStudents).sort((a,b)=>a-b);
                 window.saveRecordToFirebase(todayStr, brushedArray, totalStudents);
             });
 
-            // 重置按鈕
             resetBtn.addEventListener('click', () => {
                 brushedStudents.clear();
-                studentCountInput.value = 30; // 預設值
+                studentCountInput.value = 30; 
                 totalStudents = 30;
                 localStorage.setItem('studentCount', 30);
                 
-                // 清除查詢面板
                 document.getElementById('queryStudentId').value = '';
                 document.getElementById('queryStartDate').value = '';
                 document.getElementById('queryEndDate').value = '';
@@ -582,7 +486,7 @@
                 showModal("已重置", "畫面上所有的資料已清除歸零。");
             });
 
-            /* ==== 查詢頁框開啟/關閉邏輯 ==== */
+            /* ==== 查詢頁框邏輯 ==== */
             openQueryBtn.addEventListener('click', () => {
                 queryModal.classList.remove('hidden');
                 queryModal.classList.add('flex');
@@ -603,7 +507,6 @@
                 }, 300);
             });
 
-            // 點擊頁框外部背景也可關閉
             queryModal.addEventListener('click', (e) => {
                 if (e.target === queryModal) {
                     closeQueryBtn.click();
@@ -611,8 +514,6 @@
             });
 
             /* ==== 查詢功能邏輯 ==== */
-            
-            // 頁籤切換
             tabStudent.addEventListener('click', () => {
                 tabStudent.classList.add('border-active-blue', 'text-active-blue');
                 tabStudent.classList.remove('border-transparent', 'text-title-blue/40');
@@ -631,7 +532,6 @@
                 panelStudent.classList.add('hidden');
             });
 
-            // 查詢單一學生
             document.getElementById('btnQueryStudent').addEventListener('click', () => {
                 const id = parseInt(document.getElementById('queryStudentId').value);
                 const resultDiv = document.getElementById('resultStudent');
@@ -661,7 +561,6 @@
                 resultDiv.innerHTML = html;
             });
 
-            // 查詢週期 (🌟 升級版：加入彙整統計與滿分星星)
             document.getElementById('btnQueryPeriod').addEventListener('click', () => {
                 const start = document.getElementById('queryStartDate').value;
                 const end = document.getElementById('queryEndDate').value;
@@ -683,7 +582,6 @@
                     return;
                 }
 
-                // 1. 計算統計資料
                 const totalDays = matchedRecords.length;
                 let studentCounts = new Array(totalStudents + 1).fill(0);
                 
@@ -695,7 +593,6 @@
                     }
                 });
 
-                // 2. 構建彙整總結 UI
                 let html = `<div class="w-full">`;
                 
                 html += `
@@ -723,7 +620,6 @@
 
                 html += `</div></div>`;
 
-                // 3. 構建每日詳細紀錄 UI
                 html += `<p class="font-bold text-title-blue text-lg mb-4 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-active-blue"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> 每日詳細紀錄 (點擊按鈕可直接修改)</p>`;
                 html += '<div class="space-y-4">';
                 
@@ -735,7 +631,6 @@
                                 </div>
                                 <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 gap-3 sm:gap-4 md:gap-5 justify-items-center">`;
                     
-                    // 繪製該日期的全班小按鈕
                     for(let i = 1; i <= r.total; i++) {
                         const isBrushed = r.brushed.includes(i);
                         const btnClass = isBrushed 
@@ -753,7 +648,6 @@
             });
         });
 
-        // Modal 邏輯 (取代原生的 alert)
         function showModal(title, message) {
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
@@ -765,7 +659,6 @@
             
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            // 延遲一下觸發動畫
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
                 modalContent.classList.remove('scale-95');
@@ -784,10 +677,9 @@
             setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
-            }, 300); // 配合 transition 時間
+            }, 300);
         });
         
-        // 啟動 Firebase 或 離線模式
         initFirebase();
     </script>
 </body>
